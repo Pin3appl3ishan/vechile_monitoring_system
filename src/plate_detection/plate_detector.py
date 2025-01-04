@@ -42,3 +42,27 @@ class PlateDetector:
             cv2.waitKey(0)
             
         return edges
+    
+    def find_plate_candidates(self, edges: np.ndarray, original_image: np.ndarray) -> List[np.ndarray]:
+        # Find contours in the image
+        contours, _ = cv2.findContours(edges,
+                                        cv2.RETR_EXTERNAL, 
+                                        cv2.CHAIN_APPROX_SIMPLE)  
+        
+        plate_candidates = []
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+
+            # Filter out small and large contours
+            if area < self.min_plate_area or area > self.max_plate_area:
+                continue
+
+            # Get minimum area rectangle 
+            rect = cv2.minAreaRect(contour)
+            (x, y), (w, h), angle = rect
+
+            # Aspect ratio filtering
+            aspect_ratio = max(w, h) / min(w, h)
+            if aspect_ratio < self.min_aspect_ratio or aspect_ratio > self.max_aspect_ratio:
+                continue

@@ -115,3 +115,23 @@ class PlateDetector:
                 cv2.waitKey(0)
 
         return plate_regions
+    
+    def detect_plates(self, image: np.ndarray) -> List[np.ndarray]:
+        """
+        Detect license plates in the input image.
+        Args:
+            image: Input BGR image
+        Returns:
+            List of extracted plate images
+        """
+        # --- clear pipeline of operations ---
+        # Preprocess the image
+        edges = self.preprocess_image(image)
+
+        # Find potential plate regions
+        plate_candidates = self.find_plate_candidates(edges, image)
+
+        # Extract and return plate regions
+        plate_regions = self.extract_plate_regions(plate_candidates, image)
+
+        return plate_regions

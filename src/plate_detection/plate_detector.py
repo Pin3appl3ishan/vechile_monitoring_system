@@ -66,3 +66,52 @@ class PlateDetector:
             aspect_ratio = max(w, h) / min(w, h)
             if aspect_ratio < self.min_aspect_ratio or aspect_ratio > self.max_aspect_ratio:
                 continue
+
+    def extract_plate_regions(self, contours: List[np.ndarray], image: np.ndarray) -> List[np.ndarray]:
+        """
+        Extract the plate regions from the image based on contours.
+        Args:
+            image: Original image
+            contours: List of plate candidate contours
+        Returns:
+            List of extracted plate images
+        """
+        
+        plate_regions = []
+
+        for contour in contours:
+            # Get minimum area rectangle 
+            rect = cv2.minAreaRect(contour)
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+
+            # Get width and height of the rectangle
+            width = int(rect[1][0])
+            height = int(rect[1][1])
+
+            # Handle the case where width and height might be swapped
+            if width < height:
+                width, height = height, width
+
+            # Source points for perspective transformation
+            src_pts = box.astype("float32")
+
+            # Destination points for a straight rectangle
+            dest_pts = np.array([[0, height - 1],
+                                  [0, 0],
+                                  [width - 1, 0],
+                                  [width - 1, height - 1]], dtype="float32")
+            
+            # Calculate perspective transform matrix
+            M = cv2.getPerspectiveTransform(src_pts, dest_pts)
+
+            # Warp the image (gives a straight plate image)
+            warped = cv2.warpPerspective(image, M, (width, height))
+
+            plate_regions.append(warped)
+
+            if self.debug_mode:
+                cv2.imshow('Warped', warped)
+                cv2.waitKey(0)
+
+        return plate_regions

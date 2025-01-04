@@ -1,0 +1,4 @@
+opencv-python
+numpy==1.24.3
+pytesseract==0.3.7
+pytest==7.4.3

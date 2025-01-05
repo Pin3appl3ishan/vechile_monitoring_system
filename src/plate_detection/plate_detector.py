@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import os
 
 class PlateDetector:
@@ -13,6 +13,11 @@ class PlateDetector:
         self.min_aspect_ratio = 2.0  # License plates are typically rectangular
         self.max_aspect_ratio = 5.0
 
+        # new parameters for enhanced plate detection
+        self.clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        self.plate_min_width = 60
+        self.plate_min_height = 20
+        
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocess the image for plate detection.
@@ -25,11 +30,17 @@ class PlateDetector:
         # Convert the image to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+        # Apply CLAHE to enhance the contrast
+        enhanced = self.clahe.apply(gray)
+
         # Apply bilateral filter to reduce noise while keeping edges sharp
         denoised = cv2.bilateralFilter(gray, 11, 17, 17)
         
         # Edge detection using Canny
-        edges = cv2.Canny(denoised, 30, 200)
+        # Dynamic edge detection using Otsu's method
+        high_thresh, _ = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        low_thresh = 0.5 * high_thresh
+        edges = cv2.Canny(denoised, low_thresh, high_thresh)
         
         # Morphological operations to connect nearby edges
         kernel = np.ones((3,3), np.uint8)
@@ -37,6 +48,7 @@ class PlateDetector:
         
         if self.debug_mode:
             cv2.imshow('Gray', gray)
+            cv2.imshow('Enhanced', enhanced)
             cv2.imshow('Denoised', denoised)
             cv2.imshow('Edges', edges)
             cv2.waitKey(0)

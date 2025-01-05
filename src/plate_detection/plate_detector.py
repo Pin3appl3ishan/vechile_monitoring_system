@@ -236,7 +236,7 @@ class PlateDetector:
         Args:
             image: Input BGR image
         Returns:
-            List of extracted plate images
+            List of extracted plate images (plate_image, confidence score)
         """
         # --- clear pipeline of operations ---
         # Preprocess the image
@@ -244,8 +244,13 @@ class PlateDetector:
 
         # Find potential plate regions
         plate_candidates = self.find_plate_candidates(edges, image)
+        
+        # Extract and return plate regions with their confidence scores
+        results = []
+        for contour, confidence in plate_candidates:
+            rect = cv2.minAreaRect(contour)
+            warped = self._warp_plate_region(image, contour, rect)
+            if warped is not None:
+                results.append((warped, confidence))
 
-        # Extract and return plate regions
-        plate_regions = self.extract_plate_regions(plate_candidates, image)
-
-        return plate_regions
+        return results

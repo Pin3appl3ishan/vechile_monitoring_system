@@ -101,6 +101,46 @@ class PlateDetector:
             # sort by confidence score
             plate_candidates.sort(key=lambda x: x[1], reverse=True)
             return plate_candidates
+        
+    def _calculate_confidence(self, image: np.ndarray, contour: np.ndarray, rect: tuple) -> float:
+        """
+        Calculate the confidence score of a plate candidate.
+        Args:
+            image: Original BGR image
+            contour: Contour of the plate candidate
+            rect: Minimum area rectangle of the contour
+        Returns:
+            Confidence score
+        """
+        # Extract the plate region
+        warped = self._warp_plate_region(image, contour, rect)
+        if warped is None:
+            return 0.0
+        
+        # Convert to grayscale if needed
+        if len(warped.shape) == 3:
+            warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+
+        # Calculate various metrics
+        (_, width) = rect
+        height = min(rect[1])
+
+        # Aspect ratio score
+        aspect_ratio = width / height
+        aspect_score = max(0, min(1, 1 - abs(aspect_ratio - 3.5) / 2))
+
+        # Variance score (text presence)
+        variance = np.var(warped) / 10000
+        variance_score = min(1.0, variance)
+
+        # Edge density score
+        edges = cv2.Canny(warped, 100, 200)
+        edge_density = np.sum(edges) / (warped.shape[0] * warped.shape[1] * 255)
+        edge_score = min(1.0, edge_density * 5)
+
+        # Combined confidence score
+        confidence = (aspect_score + variance_score + edge_score) / 3
+        return confidence
 
     def extract_plate_regions(self, contours: List[np.ndarray], image: np.ndarray) -> List[np.ndarray]:
         """

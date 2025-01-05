@@ -56,6 +56,14 @@ class PlateDetector:
         return edges
     
     def find_plate_candidates(self, edges: np.ndarray, original_image: np.ndarray) -> List[np.ndarray]:
+        """
+        Enhanced plate candidate detection with confidence scoring.
+        Args:
+            edges: Preprocessed edge image
+            original_image: Original BGR image
+        Returns:
+            List of tuples containing (contour, confidence_score)
+        """
         # Find contours in the image
         contours, _ = cv2.findContours(edges,
                                         cv2.RETR_EXTERNAL, 
@@ -78,6 +86,21 @@ class PlateDetector:
             aspect_ratio = max(w, h) / min(w, h)
             if aspect_ratio < self.min_aspect_ratio or aspect_ratio > self.max_aspect_ratio:
                 continue
+
+            # check angle 
+            adjusted_angle = abs(angle) if abs(angle) < 45 else 90 - abs(angle)
+            if adjusted_angle > self.angle_threshold:
+                continue
+
+            # Confidence score calculation
+            confidence = self.calculate_confience(original_image, contour, rect)
+
+            if confidence > self.confidence_threshold:
+                plate_candidates.append(contour, confidence)
+
+            # sort by confidence score
+            plate_candidates.sort(key=lambda x: x[1], reverse=True)
+            return plate_candidates
 
     def extract_plate_regions(self, contours: List[np.ndarray], image: np.ndarray) -> List[np.ndarray]:
         """

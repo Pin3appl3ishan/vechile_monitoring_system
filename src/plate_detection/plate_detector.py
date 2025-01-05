@@ -141,6 +141,45 @@ class PlateDetector:
         # Combined confidence score
         confidence = (aspect_score + variance_score + edge_score) / 3
         return confidence
+    
+    def _warp_plate_region(self, image: np.ndarray, contour: np.ndarray, rect: tuple) -> Optional[np.ndarray]:
+        """
+        Warp the plate region based on the contour and rectangle.
+        Args:
+            image: Original BGR image
+            contour: Contour of the plate candidate
+            rect: Minimum area rectangle of the contour
+        Returns:
+            Warped plate region or None if warping fails
+        """
+        try:
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+
+            # Get width and height of the rectangle
+            width = int(rect[1][0])
+            height = int(rect[1][1])
+
+            # Ensure width is greater than height
+            if height > width:
+                width, height = height, width
+
+            # Source points
+            src_pts = box.astype("float32")
+            
+            # Destination points
+            dst_pts = np.array([[0, height-1],
+                               [0, 0],
+                               [width-1, 0],
+                               [width-1, height-1]], dtype="float32")
+
+            # Apply perspective transformation
+            matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
+            warped = cv2.warpPerspective(image, matrix, (width, height))
+
+            return warped
+        except:
+            return None
 
     def extract_plate_regions(self, contours: List[np.ndarray], image: np.ndarray) -> List[np.ndarray]:
         """

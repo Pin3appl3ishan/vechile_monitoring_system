@@ -17,6 +17,8 @@ class PlateDetector:
         self.clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         self.plate_min_width = 60
         self.plate_min_height = 20
+        self.confidence_threshold = 0.5 # minimum confidence score for a plate
+        self.angle_threshold = 10 # tolerance for plate angle
         
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
         """
@@ -93,14 +95,14 @@ class PlateDetector:
                 continue
 
             # Confidence score calculation
-            confidence = self.calculate_confience(original_image, contour, rect)
+            confidence = self._calculate_confidence(original_image, contour, rect)
 
             if confidence > self.confidence_threshold:
                 plate_candidates.append(contour, confidence)
 
-            # sort by confidence score
-            plate_candidates.sort(key=lambda x: x[1], reverse=True)
-            return plate_candidates
+        # sort by confidence score
+        plate_candidates.sort(key=lambda x: x[1], reverse=True)    
+        return plate_candidates
         
     def _calculate_confidence(self, image: np.ndarray, contour: np.ndarray, rect: tuple) -> float:
         """
@@ -121,12 +123,13 @@ class PlateDetector:
         if len(warped.shape) == 3:
             warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
 
-        # Calculate various metrics
-        (_, width) = rect
-        height = min(rect[1])
+        # # Calculate various metrics
+        # (_, width) = rect
+        # height = min(rect[1])
 
         # Aspect ratio score
-        aspect_ratio = width / height
+        width, height = rect[1]
+        aspect_ratio = max(width, height) / min(width, height)
         aspect_score = max(0, min(1, 1 - abs(aspect_ratio - 3.5) / 2))
 
         # Variance score (text presence)
@@ -135,7 +138,7 @@ class PlateDetector:
 
         # Edge density score
         edges = cv2.Canny(warped, 100, 200)
-        edge_density = np.sum(edges) / (warped.shape[0] * warped.shape[1] * 255)
+        edge_density = np.sum(edges) / (warped.size * 255)
         edge_score = min(1.0, edge_density * 5)
 
         # Combined confidence score
@@ -181,7 +184,7 @@ class PlateDetector:
         except:
             return None
 
-    def extract_plate_regions(self, contours: List[np.ndarray], image: np.ndarray) -> List[np.ndarray]:
+    # def extract_plate_regions(self, contours: List[np.ndarray], image: np.ndarray) -> List[np.ndarray]:
         """
         Extract the plate regions from the image based on contours.
         Args:

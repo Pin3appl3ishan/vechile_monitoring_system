@@ -2,7 +2,7 @@ from src.plate_detection import PlateDetector
 import cv2
 import os
 
-def main():
+def test():
     # Initialize the plate detector
     detector = PlateDetector()
 
@@ -24,5 +24,5 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    main() 
+    test() 
     
